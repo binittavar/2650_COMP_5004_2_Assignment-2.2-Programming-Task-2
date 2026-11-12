@@ -1,9 +1,9 @@
 venv/
-numcompute/rank.py
 .pytest_cache/
 __pycache__/
 *.egg-info/
 *.py[cod]
 .coverage
 numcompute/__pycache__/
-tests/__pycache__/
+tests/__pycache__/demo/stream_log.csv
+.ipynb_checkpoints/
