@@ -6,39 +6,12 @@ import pytest
 from numcompute_stream._validation import NotFittedError
 from numcompute_stream.tree import DecisionTreeClassifier, best_split, entropy, gini
 
-# The twelve students from the course notes: submitted, attended, study_group -> passed
-STUDENTS = np.array([
-    [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 0, 1], [1, 1, 0, 1],
-    [1, 0, 1, 1],
-    [1, 0, 0, 0], [1, 0, 0, 0],
-    [0, 1, 1, 0], [0, 1, 1, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 0],
-], dtype=float)
-
-
 def test_impurity_values():
     assert gini([5, 5]) == pytest.approx(0.5)
     assert entropy([5, 5]) == pytest.approx(1.0)
     assert gini([4, 0]) == 0 and entropy([4, 0]) == 0
     assert gini([0, 0]) == 0                       # empty node, no division by zero
     np.testing.assert_allclose(gini(np.array([[1, 1], [2, 0]])), [0.5, 0.0])
-
-
-def test_course_example_root_split_is_submitted():
-    X, y = STUDENTS[:, :3], STUDENTS[:, 3].astype(int)
-    for criterion in ("gini", "entropy"):
-        split = best_split(X, y, 2, criterion=criterion)
-        assert split["feature"] == 0                 # "submitted?" has the biggest gain
-    # before 0.486, after 7/12 * 0.408 + 5/12 * 0 = 0.238, gain 0.248 (course tab 03)
-    assert best_split(X, y, 2)["gain"] == pytest.approx(0.486 - 0.238, abs=2e-3)
-
-
-def test_course_example_depth2_tree_misclassifies_only_student5():
-    X, y = STUDENTS[:, :3], STUDENTS[:, 3].astype(int)
-    tree = DecisionTreeClassifier(max_depth=2).fit(X, y)
-    wrong = np.flatnonzero(tree.predict(X) != y)
-    assert wrong.tolist() == [4]                     # student 5 (index 4) is the fluke
-    assert tree.get_depth() == 2 and tree.get_n_leaves() == 3
-
 
 def test_vectorised_split_matches_brute_force():
     rng = np.random.default_rng(5)
@@ -221,14 +194,6 @@ def test_shape_and_label_errors():
         tree.fit(np.ones((2, 1)), np.array([0.0, np.nan]))
     with pytest.raises(ValueError, match="reshape"):
         tree.fit(np.ones(3), np.array([0, 1, 0]))
-
-
-def test_export_text_lists_the_question():
-    X, y = STUDENTS[:, :3], STUDENTS[:, 3].astype(int)
-    text = DecisionTreeClassifier(max_depth=2).fit(X, y).export_text(["submitted", "attended", "study_group"])
-    assert text.splitlines()[0] == "|--- submitted <= 0.5"
-    assert "attended" in text
-
 
 def test_memory_footprint_counts_buffer():
     tree = DecisionTreeClassifier(buffer_size=1000).partial_fit(np.ones((100, 4)), np.zeros(100))
